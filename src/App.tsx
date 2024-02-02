@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './App.css'
 import { useMqttClient } from './hooks/useMqttClient';
 
@@ -20,6 +20,7 @@ function App() {
   const [history, setHistory] = useState<string[]>([]);
   const [message, setMessage] = useState<string>('');
   const client = useMqttClient('127.0.0.1', 15675, '/ws', clientId);
+  const scrollEnd = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
 
@@ -36,23 +37,34 @@ function App() {
 
     })();
   }, []);
+  useEffect(() => {
+    scrollToBottom();
+  }, [history])
 
   const handleSubmit = () => {
     if (message.length != 0) {
       client.send('chat', JSON.stringify({ clientId, message, sentDate: new Date() }));
       setMessage('');
+      return true;
     }
+    return false;
   }
+
+  const scrollToBottom = () => {
+    scrollEnd.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   return (
     <>
-      <div aria-label='chat-history' style={{ border: '1px solid black', minHeight: '480px' }}>
+      <div aria-label='chat-history' style={{ border: '1px solid black', height: '480px', overflow: 'auto' }}>
         {history.map((msg, idx) => (<div key={idx}>{msg}</div>))}
+        <div ref={scrollEnd}></div>
       </div>
 
       <div style={{ display: 'flex' }}>
         <input type="text" value={clientId} maxLength={5} style={{ width: 60 }} readOnly={true} />
         <input type="text" placeholder='여기에 메시지를 입력 🤓' value={message} onChange={(e) => { setMessage(e.target.value) }} onKeyDown={(e) => (e.key == 'Enter' && handleSubmit())} />
-        <input type="button" value="전송" onClick={handleSubmit} />
+        <input type="button" value="전송" onClick={() => handleSubmit()} />
       </div>
     </>
   )
